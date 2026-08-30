@@ -20,8 +20,7 @@ def reset_one_shot_warnings():
     makes them leak across tests, so whether a warning fires would otherwise
     depend on test order.
     """
-    from custom_components.ontrac import api
-    from custom_components.ontrac import parcels
+    from custom_components.ontrac import api, parcels
 
     api._warned_multi_package = False
     parcels._warned.clear()
