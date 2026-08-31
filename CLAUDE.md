@@ -35,6 +35,12 @@ you act in one of these areas:
 
 ## Carrier-specific notes
 
+- **No `awaiting_pickup` sensor yet — unconfirmed, not structural.** Of the
+  eleven confirmed live `EventCode`s, none is a pickup-point arrival
+  (carrier-research's `ontrac.md`); `pickup`/`pickup_point` stay
+  `False`/`None` in `parcels.py`. That is "unseen so far," not "cannot
+  happen" — revisit once a real parcel or a fuller code capture settles it.
+  See `.github/CONVENTIONS.md`'s pickup-point convention.
 - **Keyless, code-based tracking:** Endpoint `https://webtrack.ontrac.com/PackageServices/tracking/{tracking_code}` needs no credentials, API keys, or cookies.
 - **Not-found is structured HTTP 404:** Unknown tracking codes return `404` with an RFC9110 ProblemDetails JSON body (`{"Title": "Not Found", "Status": 404}`). This is handled as a pending parcel (`None`), not an error. Any non-JSON 404 or outage raises `OnTracApiError`.
 - **Status vocabulary:** Mapped strictly by `EventCode` (not `Status` which is too coarse):
