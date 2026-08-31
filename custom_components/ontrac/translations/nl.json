@@ -30,16 +30,16 @@
         }
       },
       "settings": {
-        "title": "OnTrac-instellingen",
+        "title": "Instellingen",
         "data": {
-          "delivered_filter_type": "Bezorgde pakketten: filteren op",
+          "delivered_filter_type": "Filteren op",
           "delivered_filter_amount": "Bezorgde pakketten: aantal",
-          "include_history": "Statusgeschiedenis opnemen"
+          "include_history": "Statusgeschiedenis toevoegen"
         },
         "data_description": {
           "delivered_filter_type": "Toon bezorgde pakketten van de laatste X dagen, of beperk tot de X meest recente.",
           "delivered_filter_amount": "Aantal dagen of pakketten om te tonen.",
-          "include_history": "Voegt per pakket een history-attribuut toe met elke statusupdate (tijdstip, status, originele tekst). Standaard uit."
+          "include_history": "Voegt per pakket een geschiedenisattribuut toe met elke statusupdate (tijdstip, status, oorspronkelijke tekst). Standaard uit."
         }
       }
     },
