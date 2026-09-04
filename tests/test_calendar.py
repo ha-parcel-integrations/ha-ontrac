@@ -44,6 +44,17 @@ def test_event_returns_earliest_upcoming():
     assert event.summary == "Example Sender"
 
 
+def test_event_falls_back_to_planned_to():
+    """OnTrac never supplies planned_from, so planned_to opens the event."""
+    cal = _cal([
+        _parcel("LATE", planned_to="2099-01-02T10:00:00Z"),
+        _parcel("SOON", planned_to="2099-01-01T10:00:00Z"),
+    ])
+    event = cal.event
+    assert event.uid == "SOON"
+    assert event.start == datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+
+
 def test_event_none_when_no_planned():
     assert _cal([_parcel("A")]).event is None
 

@@ -30,6 +30,7 @@ def _parcel(
     status: ParcelStatus = ParcelStatus.IN_TRANSIT,
     pickup: bool = False,
     planned_from: str | None = None,
+    planned_to: str | None = None,
 ) -> dict:
     return {
         "carrier": "OnTrac",
@@ -39,6 +40,7 @@ def _parcel(
         "status": status,
         "pickup": pickup,
         "planned_from": planned_from,
+        "planned_to": planned_to,
     }
 
 
@@ -70,6 +72,25 @@ def test_next_delivery_picks_earliest():
     sensor = OnTracNextDeliverySensor(coordinator, _entry())
     assert sensor.native_value == datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
     assert sensor.extra_state_attributes["barcode"] == "B"
+
+
+def test_next_delivery_falls_back_to_planned_to():
+    """OnTrac never supplies planned_from, so planned_to carries the moment."""
+    coordinator = _coordinator([
+        _parcel("A", planned_to="2026-05-02T10:00:00Z"),
+        _parcel("B", planned_to="2026-05-01T10:00:00Z"),
+    ])
+    sensor = OnTracNextDeliverySensor(coordinator, _entry())
+    assert sensor.native_value == datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
+    assert sensor.extra_state_attributes["barcode"] == "B"
+
+
+def test_next_delivery_prefers_planned_from_over_planned_to():
+    coordinator = _coordinator([
+        _parcel("A", planned_from="2026-05-01T10:00:00Z", planned_to="2026-05-09T10:00:00Z"),
+    ])
+    sensor = OnTracNextDeliverySensor(coordinator, _entry())
+    assert sensor.native_value == datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
 
 
 def test_next_delivery_none_without_moments():

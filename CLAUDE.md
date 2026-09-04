@@ -51,6 +51,7 @@ you act in one of these areas:
   - `BCLD`, `NDMI` → `problem`
 - **Unit conversions:** `WeightUnits == "lbs"` converted to kg (`× 0.45359237`), `DimensionUnits == "in"` converted to cm (`× 2.54`).
 - **ETA & timestamps:** `planned_from` is `None`; `planned_to` is `UtcExpectedDeliveryDateTime` (cleared on delivered parcels). `UtcDeliveryDateTime` is used as `delivered_at`.
+- **Sort key:** the suite contract sorts active parcels on `planned_from`, but OnTrac never supplies one, which would leave every active parcel in the unordered no-timestamp bucket. `coordinator.py` therefore sorts on `planned_to`, and `sensor.py`/`calendar.py` fall back to `planned_to` when `planned_from` is `None`. Deliberate deviation — do not "fix" it back to the template.
 - **Privacy & Diagnostics:** `Consignee`, `VpodImageUrl` (doorstep photos), signature fields, and all event-level location fields (`City`/`State`/`PostalCode`) are strictly redacted in `TO_REDACT`.
 - **API mechanics:** Full documentation lives in `carrier-research/ontrac/api/`.
 

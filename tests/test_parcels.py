@@ -81,7 +81,7 @@ def test_unmapped_status_warns_only_once(caplog):
 
 
 # ---------------------------------------------------------------------------
-# pre-1.0 one-shot warnings for unconfirmed shapes (BUILD_PLAN.md §5)
+# pre-1.0 one-shot warnings for unconfirmed shapes
 # ---------------------------------------------------------------------------
 
 

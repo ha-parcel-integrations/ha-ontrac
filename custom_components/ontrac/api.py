@@ -79,7 +79,7 @@ class OnTracApiClient:
         """
         url = TRACKING_API_URL.format(tracking_code=tracking_code)
         headers = {
-            "User-Agent": "HomeAssistant-OnTrac/0.9.0",
+            "User-Agent": "HomeAssistant-OnTrac/0.9.1",
             "Accept": "application/json",
         }
         async with self._session.get(url, headers=headers) as response:
