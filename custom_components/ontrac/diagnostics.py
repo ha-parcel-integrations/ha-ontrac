@@ -12,7 +12,7 @@ from . import OnTracConfigEntry
 # identifies a person, an address or a specific parcel. Over-redacting is
 # cheap; under-redacting leaks a user's home address into a GitHub thread.
 #
-# OnTrac specific redaction list from tracking.md:
+# OnTrac specific redaction list:
 # Tracking, Consignee block, Reference1-3, VpodImageUrl, SignatureImageString,
 # PodText, and every event City/State/PostalCode.
 TO_REDACT = {
