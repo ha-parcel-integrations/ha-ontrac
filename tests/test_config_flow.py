@@ -21,10 +21,11 @@ def test_normalize_tracking_code_strips_and_uppercases():
     assert normalize_tracking_code(None) == ""
 
 
-def test_valid_tracking_code_bounds():
+def test_valid_tracking_code_accepts_any_non_empty_value():
     assert valid_tracking_code("EXAMPLE123456")
-    assert not valid_tracking_code("ABC")  # too short
-    assert not valid_tracking_code("A" * 31)  # too long
+    assert valid_tracking_code("ABC")
+    assert valid_tracking_code("A" * 31)
+    assert not valid_tracking_code("")
 
 
 async def test_user_flow_creates_hub_without_input(hass):
@@ -120,14 +121,16 @@ async def test_options_add_code_with_separators(hass):
     ]
 
 
-async def test_options_add_invalid_tracking_code(hass):
+async def test_options_accepts_code_of_unrecognized_shape(hass):
+    """Codes that don't match any guessed carrier format are still accepted."""
     entry = _hub([])
     entry.add_to_hass(hass)
     result = await _open_options_step(hass, entry, "parcels")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], _parcel_input("abc")
     )
-    assert result["errors"]["base"] == "invalid_tracking_code"
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_PARCELS] == [{CONF_TRACKING_CODE: "ABC"}]
 
 
 async def test_options_de_duplicates_tracking_codes(hass):
