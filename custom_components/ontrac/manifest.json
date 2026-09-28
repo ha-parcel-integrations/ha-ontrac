@@ -2,7 +2,7 @@
   "domain": "ontrac",
   "name": "OnTrac",
   "codeowners": [
-    "@peternijssen"
+    "@peter-mdf"
   ],
   "config_flow": true,
   "documentation": "https://github.com/ha-parcel-integrations/ha-ontrac",
