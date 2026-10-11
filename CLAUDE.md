@@ -54,7 +54,14 @@ Where this repo diverges from it, that is recorded below under
   - `ORIG`, `ARRD`, `SFCT`, `FCTF`, `LOAD` → `in_transit`
   - `OFDL` → `out_for_delivery`
   - `DLVD` → `delivered`
-  - `BCLD`, `NDMI` → `problem`
+  - `BCLD`, `NDMI`, `UTLV`, `ONHD` → `problem` (`UTLV`: attempt left the package
+    over a security or signature requirement; `ONHD`: held until the recipient
+    supplies address details or instructions)
+  - **`NFRP` is deliberately unmapped.** OnTrac files it under its "Delivered"
+    bucket, but its own description says the order was transferred to another
+    carrier — not a delivery, and the reply never says what happens next. It
+    stays `unknown` with the one-shot WARNING (pinned by a test) until a real
+    parcel settles it. Do not map it from the carrier's "Delivered" label.
 - **Unit conversions:** `WeightUnits == "lbs"` converted to kg (`× 0.45359237`), `DimensionUnits == "in"` converted to cm (`× 2.54`).
 - **ETA & timestamps:** `planned_from` is `None`; `planned_to` is `UtcExpectedDeliveryDateTime` (cleared on delivered parcels). `UtcDeliveryDateTime` is used as `delivered_at`.
 - **Sort key:** the suite contract sorts active parcels on `planned_from`, but OnTrac never supplies one, which would leave every active parcel in the unordered no-timestamp bucket. `coordinator.py` therefore sorts on `planned_to`, and `sensor.py`/`calendar.py` fall back to `planned_to` when `planned_from` is `None`. Deliberate deviation — do not "fix" it back to the template.

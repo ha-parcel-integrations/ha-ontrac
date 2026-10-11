@@ -124,8 +124,10 @@ The `status` field is the carrier-agnostic enum shared by the whole integration 
 | `in_transit` | In transit / facility transfer (`ORIG`, `ARRD`, `SFCT`, `FCTF`, `LOAD`) |
 | `out_for_delivery` | Out for delivery with courier (`OFDL`) |
 | `delivered` | Delivered (`DLVD`) |
-| `problem` | Delivery blocked by a closed business or incomplete address (`BCLD`, `NDMI`) |
+| `problem` | Delivery blocked or held: closed business, incomplete address, address details or instructions needed, or a security or signature requirement (`BCLD`, `NDMI`, `ONHD`, `UTLV`) |
 | `unknown` | Not yet scanned / unmapped event code |
+
+OnTrac's tracking page shows an order it has transferred to another carrier (`NFRP`) as "Delivered", although it is not with the recipient. That code is deliberately left as `unknown` rather than reported as delivered, and logs a one-time warning.
 
 The carrier's own human-readable text is always available as `raw_status`.
 

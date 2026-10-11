@@ -50,6 +50,8 @@ from .payloads import active_sample, delivered_sample, event
         ("DLVD", ParcelStatus.DELIVERED),
         ("BCLD", ParcelStatus.PROBLEM),
         ("NDMI", ParcelStatus.PROBLEM),
+        ("UTLV", ParcelStatus.PROBLEM),
+        ("ONHD", ParcelStatus.PROBLEM),
     ],
 )
 def test_map_parcel_status_known(code, expected):
@@ -71,6 +73,26 @@ def test_map_event_status_missing_and_unmapped_are_none():
     assert map_event_status(None) is None
     assert map_event_status("SOMETHING_NEW") is None
     assert map_event_status("DLVD") == ParcelStatus.DELIVERED
+
+
+def test_transfer_to_another_carrier_is_neither_delivered_nor_mapped(caplog):
+    """NFRP sits in OnTrac's "Delivered" bucket but says the order went to
+    another carrier — it must not read as a delivery, so it stays unmapped."""
+    raw = delivered_sample()
+    raw["Events"][0] = event(
+        "NFRP",
+        "2026-03-19T20:30:00+00:00",
+        status="Delivered",
+        short_desc="Order has been transferred to another carrier",
+    )
+    parcel = normalize_parcel(raw, include_history=True)
+    assert parcel["status"] == ParcelStatus.UNKNOWN
+    assert parcel["raw_status"] == "NFRP"
+    assert parcel["delivered"] is False
+    assert parcel["delivered_at"] is None
+    assert parcel["history"][-1]["status"] is None
+    assert "NFRP" in caplog.text
+    assert "issues/new" in caplog.text
 
 
 def test_unmapped_status_warns_only_once(caplog):

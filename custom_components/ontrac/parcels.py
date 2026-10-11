@@ -44,7 +44,14 @@ _STATUS_MAP: dict[str, ParcelStatus] = {
     "DLVD": ParcelStatus.DELIVERED,         # delivered
     "BCLD": ParcelStatus.PROBLEM,           # delivery attempted; business closed
     "NDMI": ParcelStatus.PROBLEM,           # incomplete address needs correction
+    "UTLV": ParcelStatus.PROBLEM,           # attempt left the package: security or signature
+    "ONHD": ParcelStatus.PROBLEM,           # held until the recipient supplies address details
 }
+
+# NFRP is deliberately absent: OnTrac files it as "Delivered" but describes a
+# transfer to another carrier, so neither delivered nor in_transit is backed by
+# what the carrier says. Unmapped it surfaces as unknown plus the one-shot
+# warning instead of a delivered event for a parcel the recipient lacks.
 
 # Keys already warned about, so each unconfirmed shape is logged only once
 # per HA session instead of on every poll.
