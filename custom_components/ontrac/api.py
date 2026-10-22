@@ -6,6 +6,7 @@ envelope containing a `Packages` array for known parcels, and returns HTTP 404
 with a structured RFC9110 ProblemDetails JSON payload for unknown tracking
 codes.
 """
+
 from __future__ import annotations
 
 import logging
@@ -57,7 +58,7 @@ class OnTracApiClient:
 
     def _warn_multi_package(self, count: int) -> None:
         """Warn once that a response carried more than one Packages element."""
-        global _warned_multi_package
+        global _warned_multi_package  # noqa: PLW0603 -- warn once per process, not per client
         if _warned_multi_package:
             return
         _warned_multi_package = True
@@ -86,7 +87,9 @@ class OnTracApiClient:
             if response.status == 429:
                 retry_after_header = response.headers.get("Retry-After")
                 try:
-                    retry_after = float(retry_after_header) if retry_after_header else None
+                    retry_after = (
+                        float(retry_after_header) if retry_after_header else None
+                    )
                 except ValueError:
                     retry_after = None  # an HTTP-date, not seconds; let the caller's own backoff handle it
                 raise OnTracApiError(
@@ -110,15 +113,17 @@ class OnTracApiClient:
 
                 package = packages[0]
                 if not isinstance(package, dict):
-                    raise OnTracApiError("unexpected package element (not a JSON object)")
+                    raise OnTracApiError(
+                        "unexpected package element (not a JSON object)"
+                    )
                 return package
 
             if response.status == 404:
                 # Check for semantic 404 ProblemDetails JSON
                 try:
                     payload = await response.json(content_type=None)
-                except (ValueError, aiohttp.ContentTypeError):
-                    raise OnTracApiError("HTTP 404 (non-JSON body)")
+                except (ValueError, aiohttp.ContentTypeError) as err:
+                    raise OnTracApiError("HTTP 404 (non-JSON body)") from err
 
                 if isinstance(payload, dict) and (
                     payload.get("Title") == "Not Found" or payload.get("Status") == 404

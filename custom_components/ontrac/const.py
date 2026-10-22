@@ -1,4 +1,5 @@
 """Constants for the OnTrac parcel tracker integration."""
+
 from enum import StrEnum
 
 from homeassistant.const import Platform
@@ -16,14 +17,14 @@ class ParcelStatus(StrEnum):
     roughly the order a parcel moves through.
     """
 
-    REGISTERED = "registered"               # Sender announced the parcel; not handed over yet
-    IN_TRANSIT = "in_transit"               # In the carrier's network
-    OUT_FOR_DELIVERY = "out_for_delivery"   # On a delivery vehicle today
-    AT_PICKUP_POINT = "at_pickup_point"     # Ready to collect at a pickup location
-    DELIVERED = "delivered"                 # Handed over
-    RETURNING = "returning"                 # Failed delivery, going back to sender
-    PROBLEM = "problem"                     # Carrier reports an exception/issue
-    UNKNOWN = "unknown"                     # Raw status we have not mapped yet
+    REGISTERED = "registered"  # Sender announced the parcel; not handed over yet
+    IN_TRANSIT = "in_transit"  # In the carrier's network
+    OUT_FOR_DELIVERY = "out_for_delivery"  # On a delivery vehicle today
+    AT_PICKUP_POINT = "at_pickup_point"  # Ready to collect at a pickup location
+    DELIVERED = "delivered"  # Handed over
+    RETURNING = "returning"  # Failed delivery, going back to sender
+    PROBLEM = "problem"  # Carrier reports an exception/issue
+    UNKNOWN = "unknown"  # Raw status we have not mapped yet
 
 
 PLATFORMS = [Platform.BUTTON, Platform.CALENDAR, Platform.SENSOR]
@@ -37,16 +38,16 @@ KNOWN_CAPABILITIES = frozenset(
 
 # OnTrac provides: weight, dimensions, delivery_window (planned_to), url, history.
 # OnTrac does NOT provide: pickup_point.
-CAPABILITIES = frozenset(
-    {"weight", "dimensions", "delivery_window", "url", "history"}
-)
+CAPABILITIES = frozenset({"weight", "dimensions", "delivery_window", "url", "history"})
 
 # OnTrac public tracking endpoint.
 # - Keyless, code-based carrier
 # - Endpoint: GET https://webtrack.ontrac.com/PackageServices/tracking/{tracking_code}
 # - Response: {"Packages": [...]}
 # - Unknown code / not found: HTTP 404 with JSON body {"Type": "...", "Title": "Not Found", "Status": 404, "traceId": "..."}
-TRACKING_API_URL = "https://webtrack.ontrac.com/PackageServices/tracking/{tracking_code}"
+TRACKING_API_URL = (
+    "https://webtrack.ontrac.com/PackageServices/tracking/{tracking_code}"
+)
 TRACKING_URL = "https://www.ontrac.com/tracking/?number={tracking_code}"
 
 # Tracked parcels live in the config entry options as a list of

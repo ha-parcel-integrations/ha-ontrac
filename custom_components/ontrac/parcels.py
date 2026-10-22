@@ -5,10 +5,11 @@ objects beyond the config entry's options. That is deliberate: it keeps the
 carrier-specific mapping apart from the coordinator, and it makes the mapping
 trivially unit-testable without spinning up HA.
 """
+
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -33,19 +34,19 @@ NEW_ISSUE_URL = (
 # OnTrac status vocabulary mapping from EventCode to canonical ParcelStatus.
 # Checked against canonical-shape.md with the enum open.
 _STATUS_MAP: dict[str, ParcelStatus] = {
-    "EXRL": ParcelStatus.REGISTERED,        # data received, parcel not yet in the network
-    "INRL": ParcelStatus.REGISTERED,        # data received, parcel not yet in the network
-    "ORIG": ParcelStatus.IN_TRANSIT,        # origin scan
-    "ARRD": ParcelStatus.IN_TRANSIT,        # arrived at facility
-    "SFCT": ParcelStatus.IN_TRANSIT,        # arrived at final servicing facility
-    "FCTF": ParcelStatus.IN_TRANSIT,        # departed facility for transfer
-    "LOAD": ParcelStatus.IN_TRANSIT,        # loaded onto vehicle
+    "EXRL": ParcelStatus.REGISTERED,  # data received, parcel not yet in the network
+    "INRL": ParcelStatus.REGISTERED,  # data received, parcel not yet in the network
+    "ORIG": ParcelStatus.IN_TRANSIT,  # origin scan
+    "ARRD": ParcelStatus.IN_TRANSIT,  # arrived at facility
+    "SFCT": ParcelStatus.IN_TRANSIT,  # arrived at final servicing facility
+    "FCTF": ParcelStatus.IN_TRANSIT,  # departed facility for transfer
+    "LOAD": ParcelStatus.IN_TRANSIT,  # loaded onto vehicle
     "OFDL": ParcelStatus.OUT_FOR_DELIVERY,  # out for delivery
-    "DLVD": ParcelStatus.DELIVERED,         # delivered
-    "BCLD": ParcelStatus.PROBLEM,           # delivery attempted; business closed
-    "NDMI": ParcelStatus.PROBLEM,           # incomplete address needs correction
-    "UTLV": ParcelStatus.PROBLEM,           # attempt left the package: security or signature
-    "ONHD": ParcelStatus.PROBLEM,           # held until the recipient supplies address details
+    "DLVD": ParcelStatus.DELIVERED,  # delivered
+    "BCLD": ParcelStatus.PROBLEM,  # delivery attempted; business closed
+    "NDMI": ParcelStatus.PROBLEM,  # incomplete address needs correction
+    "UTLV": ParcelStatus.PROBLEM,  # attempt left the package: security or signature
+    "ONHD": ParcelStatus.PROBLEM,  # held until the recipient supplies address details
 }
 
 # NFRP is deliberately absent: OnTrac files it as "Delivered" but describes a
@@ -61,7 +62,9 @@ _warned: set[str] = set()
 # ParcelStatus directly (see map_parcel_status's docstring) but a new one is
 # still worth a warning: it may signal a status family this integration has
 # never observed.
-_KNOWN_DISPLAY_STATUSES = frozenset({"Not Yet Received", "In Transit", "Pending", "Delivered"})
+_KNOWN_DISPLAY_STATUSES = frozenset(
+    {"Not Yet Received", "In Transit", "Pending", "Delivered"}
+)
 
 # Package-level fields that were null/empty in the only capture this
 # integration is built from. A populated one is new evidence, worth a
@@ -129,8 +132,7 @@ def _warn_unknown_units(field: str, value: Any) -> None:
     """Warn once for a weight/dimension unit outside the two seen on the wire."""
     _warn_once(
         f"units:{field}:{value!r}",
-        "Unrecognised OnTrac %s value — open an issue and paste this "
-        "line: %s\n  %s=%r",
+        "Unrecognised OnTrac %s value — open an issue and paste this line: %s\n  %s=%r",
         field,
         NEW_ISSUE_URL,
         field,
@@ -178,11 +180,11 @@ def parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(str(value))
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
     return parsed
 
 
@@ -198,7 +200,7 @@ def to_iso_timestamp(value: Any) -> str | None:
         return None
     if isinstance(value, (int, float)):
         try:
-            return datetime.fromtimestamp(value / 1000, tz=timezone.utc).isoformat()
+            return datetime.fromtimestamp(value / 1000, tz=UTC).isoformat()
         except (OverflowError, OSError, ValueError):
             return None
     return str(value)
@@ -417,14 +419,12 @@ def apply_delivered_filter(parcels: list[dict], entry: ConfigEntry) -> list[dict
     shows.
     """
     options = entry.options
-    filter_type = options.get(
-        CONF_DELIVERED_FILTER_TYPE, DEFAULT_DELIVERED_FILTER_TYPE
-    )
+    filter_type = options.get(CONF_DELIVERED_FILTER_TYPE, DEFAULT_DELIVERED_FILTER_TYPE)
     amount = int(
         options.get(CONF_DELIVERED_FILTER_AMOUNT, DEFAULT_DELIVERED_FILTER_AMOUNT)
     )
     if filter_type == "days":
-        cutoff = datetime.now(timezone.utc) - timedelta(days=amount)
+        cutoff = datetime.now(UTC) - timedelta(days=amount)
         return [
             parcel
             for parcel in parcels

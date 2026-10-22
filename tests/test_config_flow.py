@@ -1,4 +1,5 @@
 """Tests for the OnTrac config and options flow."""
+
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ontrac.config_flow import (
@@ -62,8 +63,10 @@ def _parcel_input(*tracking_codes: str) -> dict:
 
 
 def _settings_input(
-    *, history=False,
-    filter_type="days", amount=7,
+    *,
+    history=False,
+    filter_type="days",
+    amount=7,
 ) -> dict:
     """Build the integration-settings form submission."""
     return {
@@ -102,9 +105,7 @@ async def test_options_add_parcel(hass):
         result["flow_id"], _parcel_input("example123456")
     )
     assert result["type"] == "create_entry"
-    assert result["data"][CONF_PARCELS] == [
-        {CONF_TRACKING_CODE: "EXAMPLE123456"}
-    ]
+    assert result["data"][CONF_PARCELS] == [{CONF_TRACKING_CODE: "EXAMPLE123456"}]
 
 
 async def test_options_add_code_with_separators(hass):
@@ -116,9 +117,7 @@ async def test_options_add_code_with_separators(hass):
         result["flow_id"], _parcel_input("example-123 456")
     )
     assert result["type"] == "create_entry"
-    assert result["data"][CONF_PARCELS] == [
-        {CONF_TRACKING_CODE: "EXAMPLE123456"}
-    ]
+    assert result["data"][CONF_PARCELS] == [{CONF_TRACKING_CODE: "EXAMPLE123456"}]
 
 
 async def test_options_accepts_code_of_unrecognized_shape(hass):
@@ -141,16 +140,16 @@ async def test_options_de_duplicates_tracking_codes(hass):
         result["flow_id"], _parcel_input("EXAMPLE111111", "example111111")
     )
     assert result["type"] == "create_entry"
-    assert result["data"][CONF_PARCELS] == [
-        {CONF_TRACKING_CODE: "EXAMPLE111111"}
-    ]
+    assert result["data"][CONF_PARCELS] == [{CONF_TRACKING_CODE: "EXAMPLE111111"}]
 
 
 async def test_options_remove_parcel(hass):
-    entry = _hub([
-        {CONF_TRACKING_CODE: "EXAMPLE111111"},
-        {CONF_TRACKING_CODE: "EXAMPLE222222"},
-    ])
+    entry = _hub(
+        [
+            {CONF_TRACKING_CODE: "EXAMPLE111111"},
+            {CONF_TRACKING_CODE: "EXAMPLE222222"},
+        ]
+    )
     entry.add_to_hass(hass)
     result = await _open_options_step(hass, entry, "parcels")
     result = await hass.config_entries.options.async_configure(
@@ -217,9 +216,7 @@ async def test_options_settings_preserves_parcels(hass):
         _settings_input(history=True, filter_type="parcels", amount=5),
     )
     assert result["type"] == "create_entry"
-    assert result["data"][CONF_PARCELS] == [
-        {CONF_TRACKING_CODE: "EXAMPLE111111"}
-    ]
+    assert result["data"][CONF_PARCELS] == [{CONF_TRACKING_CODE: "EXAMPLE111111"}]
     assert result["data"][CONF_INCLUDE_HISTORY] is True
     assert result["data"][CONF_DELIVERED_FILTER_TYPE] == "parcels"
     assert result["data"][CONF_DELIVERED_FILTER_AMOUNT] == 5

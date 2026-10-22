@@ -1,14 +1,12 @@
 """Tests for the OnTrac API client."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
 
-from custom_components.ontrac.api import (
-    OnTracApiClient,
-    OnTracApiError,
-)
+from custom_components.ontrac.api import OnTracApiClient, OnTracApiError
 from tests.payloads import not_found_body
 
 CODE = "1LSCY9R00000000"
@@ -33,9 +31,7 @@ def _session_returning(
 
 
 async def test_get_parcel_returns_parcel_on_success():
-    session = _session_returning(
-        200, {"Packages": [{"Tracking": CODE}]}
-    )
+    session = _session_returning(200, {"Packages": [{"Tracking": CODE}]})
     client = OnTracApiClient(session)
 
     parcel = await client.async_get_parcel(CODE)
@@ -46,17 +42,13 @@ async def test_get_parcel_returns_parcel_on_success():
 
 async def test_get_parcel_returns_none_when_not_found():
     """An unknown code returns structured 404 ProblemDetails, treated as None."""
-    client = OnTracApiClient(
-        _session_returning(404, not_found_body())
-    )
+    client = OnTracApiClient(_session_returning(404, not_found_body()))
     assert await client.async_get_parcel("1LSCY9R00000000") is None
 
 
 async def test_get_parcel_returns_none_on_empty_packages():
     """An empty Packages list returns None."""
-    client = OnTracApiClient(
-        _session_returning(200, {"Packages": []})
-    )
+    client = OnTracApiClient(_session_returning(200, {"Packages": []}))
     assert await client.async_get_parcel(CODE) is None
 
 
@@ -120,7 +112,9 @@ async def test_get_parcel_raises_on_429_with_retry_after():
 async def test_get_parcel_429_without_parseable_retry_after():
     """An HTTP-date Retry-After (not seconds) falls back to None."""
     client = OnTracApiClient(
-        _session_returning(429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})
+        _session_returning(
+            429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}
+        )
     )
     with pytest.raises(OnTracApiError) as excinfo:
         await client.async_get_parcel(CODE)

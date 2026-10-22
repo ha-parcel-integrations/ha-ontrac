@@ -1,4 +1,5 @@
 """Sample OnTrac API payloads shared by the test modules."""
+
 from __future__ import annotations
 
 ACTIVE_CODE = "1LSCY9R00ACTIVE"
