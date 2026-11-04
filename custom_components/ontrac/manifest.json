@@ -1,6 +1,7 @@
 {
   "domain": "ontrac",
   "name": "OnTrac",
+  "categories": ["productivity_information"],
   "codeowners": [
     "@peter-mdf"
   ],
