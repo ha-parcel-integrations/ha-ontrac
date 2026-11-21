@@ -41,12 +41,14 @@ Where this repo diverges from it, that is recorded below under
 
 ## Carrier-specific notes
 
-- **No `awaiting_pickup` sensor yet — unconfirmed, not structural.** Of the
-  twelve confirmed live `EventCode`s, none is a pickup-point arrival
-  (carrier-research's `ontrac.md`); `pickup`/`pickup_point` stay
-  `False`/`None` in `parcels.py`. That is "unseen so far," not "cannot
-  happen" — revisit once a real parcel or a fuller code capture settles it.
-  See `.github/CONVENTIONS.md`'s pickup-point convention.
+- **Pickup sensors exist, awaiting data.** Both `awaiting_pickup` and
+  `en_route_to_pickup_point` are exposed, as the contract requires of a carrier
+  that may deliver to pickup points. Pending: none of the twelve confirmed live
+  `EventCode`s is a pickup-point arrival, so no code maps to `at_pickup_point`
+  yet and both sensors read 0. `pickup` is `is_pickup(None, status,
+  event_statuses)` (no structured route flag is known); `pickup_point` stays
+  `None` until a real parcel shows a point name. Once a real parcel or a fuller
+  code capture shows a pickup-point code, map it to `at_pickup_point`.
 - **Keyless, code-based tracking:** Endpoint `https://webtrack.ontrac.com/PackageServices/tracking/{tracking_code}` needs no credentials, API keys, or cookies.
 - **Not-found is structured HTTP 404:** Unknown tracking codes return `404` with an RFC9110 ProblemDetails JSON body (`{"Title": "Not Found", "Status": 404}`). This is handled as a pending parcel (`None`), not an error. Any non-JSON 404 or outage raises `OnTracApiError`.
 - **Status vocabulary:** Mapped strictly by `EventCode` (not `Status` which is
@@ -68,18 +70,14 @@ Where this repo diverges from it, that is recorded below under
     stays `unknown` with the one-shot WARNING (pinned by a test) until a real
     parcel settles it. Do not map it from the carrier's "Delivered" label.
 - **Unit conversions:** `WeightUnits == "lbs"` converted to kg (`× 0.45359237`), `DimensionUnits == "in"` converted to cm (`× 2.54`).
-- **ETA & timestamps:** `planned_from` is `None`; `planned_to` is `UtcExpectedDeliveryDateTime` (cleared on delivered parcels). `UtcDeliveryDateTime` is used as `delivered_at`.
-- **Sort key:** the suite contract sorts active parcels on `planned_from`, but OnTrac never supplies one, which would leave every active parcel in the unordered no-timestamp bucket. `coordinator.py` therefore sorts on `planned_to`, and `sensor.py`/`calendar.py` fall back to `planned_to` when `planned_from` is `None`. Deliberate deviation — do not "fix" it back to the template.
+- **ETA & timestamps:** `planned_from`/`planned_to` come from `ExpectedDeliveryDate` (a bare date, so the whole local day, `00:00:00`-`23:59:59`) through `planned_window`; the `UtcExpectedDeliveryDateTime` moment (a `21:00` end-of-day cut-off, not a window start) is only used when the date is missing: its local calendar date, in the moment's own offset (or America/New_York for a `Z` value, whose UTC date can be a day late), becomes a whole-day window, and its offset also dates the bare date. Both are emptied for `delivered`, `at_pickup_point` and `returning`. `UtcDeliveryDateTime` is `delivered_at`, only when delivered.
+- **Sender / receiver:** `None`. The payload carries no sender or addressee name, only city/state, and a location is never a name.
 - **Privacy & Diagnostics:** `Consignee`, `VpodImageUrl` (doorstep photos), signature fields, and all event-level location fields (`City`/`State`/`PostalCode`) are strictly redacted in `TO_REDACT`.
 - **API mechanics:** Full documentation lives in `carrier-research/ontrac/api/`.
 
 ## Divergences from the scaffold
 
 Everything not listed here follows the scaffold exactly.
-
-*Dynamic polling* — OnTrac never sets `planned_from` (see *Carrier-specific
-notes*), so the hot tier collapses to "hot whenever a tracked parcel is
-`out_for_delivery`".
 
 ## Running tests
 

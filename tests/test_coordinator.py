@@ -461,14 +461,16 @@ async def test_fires_delivery_time_changed_event(hass):
     await coordinator._async_update_data()  # first refresh: suppressed
 
     moved = active_sample()
+    moved["ExpectedDeliveryDate"] = "2026-03-20"
     moved["UtcExpectedDeliveryDateTime"] = "2026-03-20T21:00:00-04:00"
     client.async_get_parcel.return_value = moved
     await coordinator._async_update_data()
     await hass.async_block_till_done()
 
     assert len(events) == 1
-    assert events[0].data["old_planned_to"] == "2026-03-19T21:00:00-04:00"
-    assert events[0].data["new_planned_to"] == "2026-03-20T21:00:00-04:00"
+    assert events[0].data["old_planned_from"] == "2026-03-19T00:00:00-04:00"
+    assert events[0].data["new_planned_from"] == "2026-03-20T00:00:00-04:00"
+    assert events[0].data["new_planned_to"] == "2026-03-20T23:59:59-04:00"
 
 
 async def test_losing_the_eta_is_silent(hass):
@@ -487,6 +489,7 @@ async def test_losing_the_eta_is_silent(hass):
     await coordinator._async_update_data()
 
     dropped = active_sample()
+    dropped["ExpectedDeliveryDate"] = None
     dropped["UtcExpectedDeliveryDateTime"] = None
     client.async_get_parcel.return_value = dropped
     await coordinator._async_update_data()

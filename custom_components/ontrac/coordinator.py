@@ -356,7 +356,7 @@ class OnTracCoordinator(DataUpdateCoordinator[list[dict]]):
             delivered, "delivered_at", descending=True
         )
         self.delivered = apply_delivered_filter(delivered_sorted, self.config_entry)
-        normalized_active = sort_parcels_by_ts(active, "planned_to")
+        normalized_active = sort_parcels_by_ts(active, "planned_from")
 
         # Events and remembered state cover every parcel; the retention option
         # only limits what the delivered sensor shows.

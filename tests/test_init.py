@@ -139,3 +139,34 @@ async def test_options_update_applies_live_without_reload(hass):
 
     incoming = hass.states.get("sensor.ontrac_incoming_parcels")
     assert incoming.state == "2"
+
+
+async def test_restored_pickup_sensors_are_not_swept_as_stale(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=DOMAIN,
+        options={CONF_PARCELS: [{CONF_TRACKING_CODE: ACTIVE_CODE}]},
+    )
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    for suffix in ("awaiting_pickup", "en_route_to_pickup_point"):
+        registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{entry.entry_id}_{suffix}",
+            config_entry=entry,
+        )
+
+    with patch(
+        "custom_components.ontrac.api.OnTracApiClient.async_get_parcel",
+        new=AsyncMock(return_value=_sample()),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    for suffix in ("awaiting_pickup", "en_route_to_pickup_point"):
+        entity_id = registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{entry.entry_id}_{suffix}"
+        )
+        assert entity_id
+        assert hass.states.get(entity_id).state == "0"

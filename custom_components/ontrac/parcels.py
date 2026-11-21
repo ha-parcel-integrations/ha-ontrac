@@ -8,11 +8,14 @@ trivially unit-testable without spinning up HA.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from collections.abc import Iterable
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 import logging
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_DELIVERED_FILTER_AMOUNT,
@@ -270,6 +273,145 @@ def tracking_url(tracking_code: str | None) -> str | None:
     return TRACKING_URL.format(tracking_code=tracking_code)
 
 
+def _moment(value: Any, zone: tzinfo) -> tuple[datetime, bool, str] | None:
+    """Return ``(aware datetime, date_only, text)`` for a carrier time, or ``None``.
+
+    A naive time or a bare date gets ``zone``; an aware time keeps its offset
+    and, when it came in as a string, its own spelling.
+    """
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, date):
+        moment = datetime.combine(value, time.min, tzinfo=zone)
+        return moment, True, moment.isoformat()
+    elif isinstance(value, str) and value:
+        try:
+            if len(value) == 10:
+                moment = datetime.combine(
+                    date.fromisoformat(value), time.min, tzinfo=zone
+                )
+                return moment, True, moment.isoformat()
+            parsed = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        if parsed.tzinfo:
+            return parsed, False, value
+    else:
+        return None
+    moment = parsed if parsed.tzinfo else parsed.replace(tzinfo=zone)
+    return moment, False, moment.isoformat()
+
+
+def _end_of_day(moment: datetime, zone: tzinfo) -> datetime:
+    local = moment.astimezone(zone)
+    return datetime.combine(local.date(), time(23, 59, 59), tzinfo=zone)
+
+
+def planned_window(
+    start: Any, end: Any, *, zone: tzinfo
+) -> tuple[str | None, str | None]:
+    """Return ``(planned_from, planned_to)`` in the canonical window shape.
+
+    ``start`` and ``end`` are ISO strings, dates or datetimes, or ``None``; an
+    epoch number must be converted first (see ``to_iso_timestamp``). A window
+    keeps both ends. One moment with a time ends at ``23:59:59`` the same local
+    day; a date covers ``00:00:00`` to ``23:59:59``; two dates run from the
+    first day's start to the last day's end. Equal values are one moment,
+    reversed values are swapped, and ``planned_to`` is never set without
+    ``planned_from``. ``zone`` is the carrier's own zone: it dates naive times
+    and bare dates and decides which day a moment ends on, so a ``Z`` moment
+    still ends on the carrier's local day. When nothing is left of that day
+    after the moment, there is no ``planned_to``.
+    """
+    first = _moment(start, zone)
+    last = _moment(end, zone)
+    if first is None:
+        first, last = last, None
+    if first is None:
+        return None, None
+
+    def closing(moment: tuple[datetime, bool, str]) -> datetime:
+        return _end_of_day(moment[0], zone) if moment[1] else moment[0]
+
+    if last is not None and closing(last) < first[0]:
+        first, last = last, first
+    if last is not None and closing(last) == first[0]:
+        last = None
+
+    if last is None:
+        end_of_day = _end_of_day(first[0], zone)
+        return first[2], end_of_day.isoformat() if end_of_day > first[0] else None
+    return first[2], closing(last).isoformat() if last[1] else last[2]
+
+
+_NO_WINDOW_STATUSES = frozenset(
+    {ParcelStatus.AT_PICKUP_POINT, ParcelStatus.RETURNING, ParcelStatus.DELIVERED}
+)
+
+
+def planned_for_status(
+    status: ParcelStatus, planned_from: str | None, planned_to: str | None
+) -> tuple[str | None, str | None]:
+    """Empty the delivery window once the parcel is at its destination or done."""
+    if status in _NO_WINDOW_STATUSES:
+        return None, None
+    return planned_from, planned_to
+
+
+def is_pickup(
+    route_flag: bool | None,
+    status: ParcelStatus,
+    event_statuses: Iterable[ParcelStatus | None] = (),
+) -> bool:
+    """Whether the delivery route ends at a pickup point.
+
+    The carrier's own route flag wins; otherwise the parcel having reached
+    ``AT_PICKUP_POINT`` at any point counts, so the value survives collection.
+    """
+    if route_flag:
+        return True
+    return status is ParcelStatus.AT_PICKUP_POINT or any(
+        event is ParcelStatus.AT_PICKUP_POINT for event in event_statuses
+    )
+
+
+_CARRIER_ZONE = ZoneInfo("America/New_York")
+
+
+def _zone_of(value: Any) -> tzinfo:
+    """Return the offset an ISO moment carries, else Home Assistant's zone.
+
+    A ``Z`` moment carries no local offset, so it reads in the carrier's zone.
+    """
+    if isinstance(value, str):
+        try:
+            zone = datetime.fromisoformat(value).tzinfo
+        except ValueError:
+            zone = None
+        if zone is not None:
+            return _CARRIER_ZONE if zone.utcoffset(None) == timedelta(0) else zone
+    return dt_util.get_default_time_zone()
+
+
+def _moment_day(value: Any) -> str | None:
+    """Return the local calendar date of an ISO moment, else ``None``.
+
+    A moment with an offset keeps its own date; a ``Z`` moment is dated in the
+    carrier's zone, since its UTC date can already be the next day.
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        moment = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        return moment.date().isoformat()
+    if moment.utcoffset() == timedelta(0):
+        moment = moment.astimezone(_CARRIER_ZONE)
+    return moment.date().isoformat()
+
+
 def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
     """Return a carrier-agnostic parcel dict with the payload under ``raw``.
 
@@ -333,8 +475,6 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
         elif dim_units is not None:
             _warn_unknown_units("DimensionUnits", dim_units)
 
-    # Sender / Receiver:
-    origin = raw.get("Origin") or {}
     consignee = raw.get("Consignee") or {}
 
     for field in _SENSITIVE_CONSIGNEE_FIELDS:
@@ -347,38 +487,36 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
     if isinstance(attributes, dict) and attributes:
         _warn_attributes_present(attributes)
 
-    sender = None
-    if origin.get("City") and origin.get("State"):
-        sender = f"{origin['City']}, {origin['State']}"
-    elif origin.get("City"):
-        sender = origin["City"]
+    # The date is the delivery commitment; the 21:00 moment is only an
+    # end-of-day cut-off, so it only names the day when the date is missing
+    # (never a window start) and supplies the carrier's local offset.
+    expected_moment = raw.get("UtcExpectedDeliveryDateTime")
+    zone = _zone_of(expected_moment)
+    expected_day = raw.get("ExpectedDeliveryDate") or _moment_day(expected_moment)
+    planned_from, planned_to = planned_for_status(
+        status, *planned_window(expected_day, None, zone=zone)
+    )
 
-    receiver = None
-    if consignee.get("City") and consignee.get("State"):
-        receiver = f"{consignee['City']}, {consignee['State']}"
-    elif consignee.get("City"):
-        receiver = consignee["City"]
-
-    # Delivery timestamps:
     delivered_at = (
         to_iso_timestamp(raw.get("UtcDeliveryDateTime")) if delivered else None
-    )
-    planned_to = (
-        None if delivered else to_iso_timestamp(raw.get("UtcExpectedDeliveryDateTime"))
     )
 
     return {
         "carrier": "OnTrac",
         "barcode": tracking_code,
-        "sender": sender,
-        "receiver": receiver,
+        "sender": None,
+        "receiver": None,
         "status": status,
         "raw_status": status_code,
         "delivered": delivered,
         "delivered_at": delivered_at,
-        "planned_from": None,
+        "planned_from": planned_from,
         "planned_to": planned_to,
-        "pickup": False,
+        "pickup": is_pickup(
+            None,
+            status,
+            (map_event_status(e.get("EventCode")) for _, e in sorted_events),
+        ),
         "pickup_point": None,
         "url": tracking_url(tracking_code),
         "weight": weight,

@@ -36,7 +36,7 @@ KNOWN_CAPABILITIES = frozenset(
     {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
 )
 
-# OnTrac provides: weight, dimensions, delivery_window (planned_to), url, history.
+# OnTrac provides: weight, dimensions, delivery_window, url, history.
 # OnTrac does NOT provide: pickup_point.
 CAPABILITIES = frozenset({"weight", "dimensions", "delivery_window", "url", "history"})
 

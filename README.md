@@ -35,7 +35,7 @@ A custom Home Assistant integration that tracks your [OnTrac](https://www.ontrac
 
 - Track any number of OnTrac parcels by tracking code — no account needed
 - Per-parcel sensor with the canonical status (`registered` / `in_transit` / `out_for_delivery` / `delivered` / …), the carrier's own status text, the expected delivery window and a tracking deep-link
-- Summary sensors: incoming parcels, next delivery, recently delivered parcels
+- Summary sensors: incoming parcels, next delivery, en route to pickup point, awaiting pickup, recently delivered parcels
 - Read-only **Deliveries** calendar with the expected delivery windows
 - `ontrac.track_parcel` / `ontrac.untrack_parcel` services, so a dashboard button can add a parcel
 - Events + device triggers for no-code automations (parcel registered, status changed, delivered, delivery time changed)
@@ -114,6 +114,8 @@ Standard HA removal applies: **Settings → Devices & Services → OnTrac → �
 | `sensor.ontrac_incoming_parcels` | Number of active tracked parcels, full list under the `parcels` attribute |
 | `sensor.ontrac_parcel_<code>` | One per tracked parcel; state is the canonical status, attributes carry the full normalised parcel |
 | `sensor.ontrac_next_delivery` | Earliest expected delivery moment across all active parcels |
+| `sensor.ontrac_en_route_to_pickup_point` | Incoming parcels on their way to a pickup point that have not arrived yet |
+| `sensor.ontrac_awaiting_pickup` | Incoming parcels that are ready to collect at a pickup point |
 | `sensor.ontrac_delivered_parcels` | Recently delivered parcels (see the retention option) |
 | `calendar.ontrac_deliveries` | Read-only calendar of expected deliveries, no extra API calls |
 | `sensor.ontrac_last_successful_update` | Diagnostic: when OnTrac was last polled successfully |

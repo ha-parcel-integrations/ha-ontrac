@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.ontrac import parcels
 from custom_components.ontrac.const import (
     CAPABILITIES,
     CONF_DELIVERED_FILTER_AMOUNT,
@@ -295,7 +296,7 @@ def test_capabilities_match_what_normalize_parcel_actually_returns():
     if "dimensions" in CAPABILITIES:
         assert delivered["dimensions"] is not None
     if "delivery_window" in CAPABILITIES:
-        assert active["planned_from"] is not None or active["planned_to"] is not None
+        assert active["planned_from"] is not None
     if "pickup_point" in CAPABILITIES:
         assert delivered["pickup_point"] is not None
     if "url" in CAPABILITIES:
@@ -308,8 +309,8 @@ def test_normalize_delivered_parcel():
     parcel = normalize_parcel(delivered_sample())
     assert parcel["carrier"] == "OnTrac"
     assert parcel["barcode"] == "1LSCY9R00DELIV"
-    assert parcel["sender"] == "MOONACHIE, NJ"
-    assert parcel["receiver"] == "ORLANDO, FL"
+    assert parcel["sender"] is None
+    assert parcel["receiver"] is None
     assert parcel["status"] == ParcelStatus.DELIVERED
     assert parcel["raw_status"] == "DLVD"
     assert parcel["delivered"] is True
@@ -334,8 +335,8 @@ def test_normalize_active_parcel_has_window():
     parcel = normalize_parcel(active_sample())
     assert parcel["status"] == ParcelStatus.OUT_FOR_DELIVERY
     assert parcel["delivered"] is False
-    assert parcel["planned_from"] is None
-    assert parcel["planned_to"] == "2026-03-19T21:00:00-04:00"
+    assert parcel["planned_from"] == "2026-03-19T00:00:00-04:00"
+    assert parcel["planned_to"] == "2026-03-19T23:59:59-04:00"
 
 
 def test_normalize_pending_placeholder():
@@ -442,3 +443,17 @@ def test_delivered_filter_keeps_unparseable_timestamp():
     """Better to show a parcel with a broken date than to silently drop it."""
     parcels = [{"barcode": "WEIRD", "delivered_at": "nonsense"}]
     assert apply_delivered_filter(parcels, _entry("days", 7)) == parcels
+
+
+def test_pickup_is_false_without_a_pickup_point_event():
+    parcel = normalize_parcel(active_sample())
+    assert parcel["pickup"] is False
+    assert parcel["pickup_point"] is None
+
+
+def test_pickup_survives_once_an_event_reached_the_pickup_point(monkeypatch):
+    """No live code maps to at_pickup_point yet, so the mapping is stubbed."""
+    monkeypatch.setattr(
+        parcels, "map_event_status", lambda code: ParcelStatus.AT_PICKUP_POINT
+    )
+    assert normalize_parcel(delivered_sample())["pickup"] is True
