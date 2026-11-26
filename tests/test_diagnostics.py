@@ -17,6 +17,7 @@ async def test_diagnostics_redacts_and_counts(hass):
             "barcode": "1LSCY9R00000000",
             "sender": "MOONACHIE, NJ",
             "receiver": "ORLANDO, FL",
+            "contents": "Running shoes",
             "status": "out_for_delivery",
             "raw": {
                 "Tracking": "1LSCY9R00000000",
@@ -44,6 +45,7 @@ async def test_diagnostics_redacts_and_counts(hass):
     assert result["entry_options"]["parcels"][0]["tracking_code"] == "**REDACTED**"
     assert result["incoming"][0]["barcode"] == "**REDACTED**"
     assert result["incoming"][0]["receiver"] == "**REDACTED**"
+    assert result["incoming"][0]["contents"] == "**REDACTED**"
     assert result["incoming"][0]["raw"]["Tracking"] == "**REDACTED**"
     assert result["incoming"][0]["raw"]["Consignee"] == "**REDACTED**"
     assert result["incoming"][0]["raw"]["VpodImageUrl"] == "**REDACTED**"

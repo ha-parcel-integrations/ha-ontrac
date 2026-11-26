@@ -187,3 +187,10 @@ def test_pickup_sensors_empty_without_data():
     coordinator.data = None
     assert OnTracAwaitingPickupSensor(coordinator, _entry()).native_value == 0
     assert OnTracEnRouteToPickupPointSensor(coordinator, _entry()).native_value == 0
+
+
+def test_next_delivery_exposes_contents():
+    parcel = _parcel("A", planned_from="2099-05-01T10:00:00Z")
+    parcel["contents"] = "Running shoes"
+    sensor = OnTracNextDeliverySensor(_coordinator([parcel]), _entry())
+    assert sensor.extra_state_attributes["contents"] == "Running shoes"

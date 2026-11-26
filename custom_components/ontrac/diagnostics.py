@@ -22,6 +22,7 @@ TO_REDACT = {
     "barcode",
     "sender",
     "receiver",
+    "contents",
     "url",
     # OnTrac payload fields
     "Tracking",
